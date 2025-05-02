@@ -1,0 +1,168 @@
+/* Reset de base */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Palette de couleurs Fight Club modernisée avec moins de rose */
+  --primary-pink: #EC66A4;
+  --dark-pink: #D14B89;
+  --pink-glow: 0 0 10px rgba(236, 102, 164, 0.4), 0 0 20px rgba(236, 102, 164, 0.2);
+  --black: #141414; /* Noir Netflix */
+  --dark-gray: #181818; /* Fond de carte Netflix */
+  --medium-gray: #2F2F2F;
+  --light-gray: #f5f5f5;
+  --accent-color: #6C757D; /* Gris neutre pour remplacer le rose dans certains cas */
+  --accent-light: #ADB5BD; /* Gris clair pour les éléments secondaires */
+  --text-color: #f5f5f5;
+  --background-gradient: linear-gradient(to bottom, #000000, #141414);
+  --card-gradient: linear-gradient(to bottom, rgba(40, 40, 40, 0.8), rgba(30, 30, 30, 0.8));
+  --glass-effect: backdrop-filter: blur(10px);
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --transition-smooth: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  --netflix-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+body {
+  font-family: 'Netflix Sans', 'Montserrat', 'Avenir', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-color);
+  background: var(--background-gradient);
+  line-height: 1.6;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  text-decoration: none;
+  color: var(--text-color);
+  transition: var(--transition-smooth);
+}
+
+a:hover {
+  color: var(--primary-pink);
+}
+
+button {
+  cursor: pointer;
+  font-family: 'Netflix Sans', 'Montserrat', sans-serif;
+  transition: var(--transition-smooth);
+  border: none;
+  outline: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  margin-bottom: 1rem;
+  letter-spacing: 0.5px;
+}
+
+/* Conteneurs */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Utilitaires */
+.text-center {
+  text-align: center;
+}
+
+.mt-20 {
+  margin-top: 20px;
+}
+
+.mb-20 {
+  margin-bottom: 20px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--dark-gray);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-pink);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dark-pink);
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(24, 24, 24, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: var(--netflix-shadow);
+}
+
+/* Style Netflix pour les boutons */
+.netflix-btn {
+  background-color: #6C757D; /* Gris au lieu du rose */
+  color: white;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.netflix-btn:hover {
+  background-color: #5A6268; /* Gris plus foncé au survol */
+  transform: scale(1.05);
+}
+
+.netflix-btn.primary {
+  background-color: var(--primary-pink); /* Garder le rose uniquement pour les actions principales */
+}
+
+.netflix-btn.primary:hover {
+  background-color: var(--dark-pink);
+}
+
+/* Style Netflix pour les cartes */
+.netflix-card {
+  background-color: var(--dark-gray);
+  border-radius: 4px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: var(--netflix-shadow);
+}
+
+.netflix-card:hover {
+  transform: scale(1.05);
+  z-index: 10;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
+} 
