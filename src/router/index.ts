@@ -3,7 +3,8 @@ import HomeView from '@/views/HomeView.vue';
 import VersusView from '@/views/VersusView.vue';
 import HistoryView from '@/views/HistoryView.vue';
 import FavoritesView from '@/views/FavoritesView.vue';
-import SearchView from '@/views/SearchView.vue';
+import DetailView from '@/views/DetailView.vue';
+import TinderView from '@/views/DiscoverView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -11,7 +12,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: SearchView
+      component: HomeView
     },
     {
       path: '/versus',
@@ -29,9 +30,14 @@ const router = createRouter({
       component: FavoritesView
     },
     {
-      path: '/search',
-      name: 'search',
-      redirect: '/'
+      path: '/detail/:type/:id',
+      name: 'detail',
+      component: DetailView
+    },
+    {
+      path: '/tinder',
+      name: 'tinder',
+      component: TinderView
     }
   ]
 });

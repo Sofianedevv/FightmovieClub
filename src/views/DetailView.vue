@@ -36,12 +36,12 @@
         
         <div class="detail-info">
           <div class="detail-header">
-            <h1>{{ mediaDetails.title }} <span class="year">({{ mediaDetails.year }})</span></h1>
+            <h1>{{ mediaDetails.title }} <span class="year">({{ releaseYear }})</span></h1>
             <div class="detail-meta">
               <span class="rating">
                 <i class="fas fa-star"></i> {{ mediaDetails.vote_average.toFixed(1) }}
               </span>
-              <span class="runtime" v-if="mediaDetails.runtime || mediaDetails.episode_run_time">
+              <span class="runtime" v-if="formatRuntime">
                 <i class="fas fa-clock"></i> {{ formatRuntime }}
               </span>
               <span class="genres">
@@ -116,13 +116,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/composables/useApi';
 
 const route = useRoute();
 const router = useRouter();
-const { fetchMovieDetails, fetchTVDetails, fetchMovieCredits, fetchTVCredits, fetchMovieRecommendations, fetchTVRecommendations } = useApi();
+const api = useApi();
 
 // État
 const mediaDetails = ref(null);
@@ -130,7 +130,7 @@ const cast = ref([]);
 const recommendations = ref([]);
 const isLoading = ref(true);
 const error = ref(null);
-const favorites = ref([]);
+const isFavorite = ref(false);
 
 // Paramètres de l'URL
 const mediaType = computed(() => route.params.type);
@@ -138,17 +138,29 @@ const mediaId = computed(() => route.params.id);
 
 // Computed properties
 const backdropStyle = computed(() => {
-  if (!mediaDetails.value || !mediaDetails.value.backdrop_path) return {};
-  return {
-    backgroundImage: `url(https://image.tmdb.org/t/p/original${mediaDetails.value.backdrop_path})`
-  };
+  if (mediaDetails.value && mediaDetails.value.backdrop_path) {
+    return {
+      backgroundImage: `url(https://image.tmdb.org/t/p/original${mediaDetails.value.backdrop_path})`
+    };
+  }
+  return { backgroundColor: '#141414' };
 });
 
 const posterUrl = computed(() => {
+  if (mediaDetails.value && mediaDetails.value.poster_path) {
+    return `https://image.tmdb.org/t/p/w500${mediaDetails.value.poster_path}`;
+  }
+  return 'https://via.placeholder.com/500x750?text=No+Image';
+});
+
+const releaseYear = computed(() => {
   if (!mediaDetails.value) return '';
-  return mediaDetails.value.poster_path 
-    ? `https://image.tmdb.org/t/p/w500${mediaDetails.value.poster_path}`
-    : 'https://via.placeholder.com/500x750?text=No+Image';
+  
+  const dateString = mediaType.value === 'movie' 
+    ? mediaDetails.value.release_date 
+    : mediaDetails.value.first_air_date;
+    
+  return dateString ? dateString.substring(0, 4) : '';
 });
 
 const formatRuntime = computed(() => {
@@ -156,150 +168,115 @@ const formatRuntime = computed(() => {
   
   let runtime = 0;
   if (mediaType.value === 'movie') {
-    runtime = mediaDetails.value.runtime;
-  } else if (mediaDetails.value.episode_run_time && mediaDetails.value.episode_run_time.length > 0) {
-    runtime = mediaDetails.value.episode_run_time[0];
+    runtime = mediaDetails.value.runtime || 0;
+  } else {
+    runtime = mediaDetails.value.episode_run_time 
+      ? mediaDetails.value.episode_run_time[0] || 0 
+      : 0;
   }
-  
-  if (!runtime) return '';
   
   const hours = Math.floor(runtime / 60);
   const minutes = runtime % 60;
-  return hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
-});
-
-const isFavorite = computed(() => {
-  if (!mediaDetails.value) return false;
-  return favorites.value.some(fav => 
-    fav.id === mediaDetails.value.id && 
-    fav.type === mediaType.value
-  );
+  
+  return hours > 0 
+    ? `${hours}h ${minutes}min` 
+    : `${minutes}min`;
 });
 
 // Méthodes
-const fetchDetails = async () => {
+const fetchMediaDetails = async () => {
   isLoading.value = true;
   error.value = null;
   
   try {
-    // Récupérer les détails du média
     if (mediaType.value === 'movie') {
-      const details = await fetchMovieDetails(mediaId.value);
-      mediaDetails.value = {
-        ...details,
-        title: details.title,
-        year: details.release_date ? details.release_date.substring(0, 4) : '',
-        type: 'movie'
-      };
+      mediaDetails.value = await api.fetchMovieDetails(mediaId.value);
+      const creditsData = await api.fetchMovieCredits(mediaId.value);
+      cast.value = creditsData.cast || [];
       
-      // Récupérer le casting
-      const credits = await fetchMovieCredits(mediaId.value);
-      cast.value = credits.cast || [];
-      
-      // Récupérer les recommandations
-      const recs = await fetchMovieRecommendations(mediaId.value);
-      recommendations.value = recs.results || [];
-      
-    } else if (mediaType.value === 'tv') {
-      const details = await fetchTVDetails(mediaId.value);
-      mediaDetails.value = {
-        ...details,
-        title: details.name,
-        year: details.first_air_date ? details.first_air_date.substring(0, 4) : '',
-        type: 'tv'
-      };
-      
-      // Récupérer le casting
-      const credits = await fetchTVCredits(mediaId.value);
-      cast.value = credits.cast || [];
-      
-      // Récupérer les recommandations
-      const recs = await fetchTVRecommendations(mediaId.value);
-      recommendations.value = recs.results || [];
+      const recommendationsData = await api.fetchMovieRecommendations(mediaId.value);
+      recommendations.value = recommendationsData.results || [];
     } else {
-      throw new Error('Type de média non reconnu');
+      mediaDetails.value = await api.fetchTVDetails(mediaId.value);
+      const creditsData = await api.fetchTVCredits(mediaId.value);
+      cast.value = creditsData.cast || [];
+      
+      const recommendationsData = await api.fetchTVRecommendations(mediaId.value);
+      recommendations.value = recommendationsData.results || [];
     }
+    
+    // Vérifier si le média est dans les favoris
+    checkFavoriteStatus();
   } catch (err) {
     console.error('Erreur lors du chargement des détails', err);
-    error.value = 'Impossible de charger les détails. Veuillez réessayer.';
+    error.value = 'Impossible de charger les détails du média';
   } finally {
     isLoading.value = false;
   }
 };
 
-// Charger les favoris depuis le localStorage
-const loadFavorites = () => {
+const checkFavoriteStatus = () => {
   const storedFavorites = localStorage.getItem('favorites');
   if (storedFavorites) {
-    favorites.value = JSON.parse(storedFavorites);
+    const favorites = JSON.parse(storedFavorites);
+    isFavorite.value = favorites.some(
+      fav => fav.id === parseInt(mediaId.value) && fav.type === mediaType.value
+    );
   }
 };
 
-// Ajouter/supprimer des favoris
 const toggleFavorite = () => {
-  if (!mediaDetails.value) return;
+  const storedFavorites = localStorage.getItem('favorites');
+  let favorites = storedFavorites ? JSON.parse(storedFavorites) : [];
   
-  const favoriteMedia = {
-    id: mediaDetails.value.id,
-    title: mediaDetails.value.title,
-    year: mediaDetails.value.year,
-    rating: mediaDetails.value.vote_average.toFixed(1),
-    posterPath: mediaDetails.value.poster_path 
-      ? `https://image.tmdb.org/t/p/w500${mediaDetails.value.poster_path}`
-      : 'https://via.placeholder.com/500x750?text=No+Image',
-    type: mediaType.value
+  const mediaInfo = {
+    id: parseInt(mediaId.value),
+    type: mediaType.value,
+    title: mediaDetails.value.title || mediaDetails.value.name,
+    year: releaseYear.value,
+    posterPath: posterUrl.value,
+    rating: mediaDetails.value.vote_average.toFixed(1)
   };
   
-  const index = favorites.value.findIndex(fav => 
-    fav.id === favoriteMedia.id && fav.type === favoriteMedia.type
-  );
-  
-  if (index === -1) {
-    // Ajouter aux favoris
-    favorites.value.push(favoriteMedia);
-  } else {
+  if (isFavorite.value) {
     // Supprimer des favoris
-    favorites.value.splice(index, 1);
+    favorites = favorites.filter(
+      fav => !(fav.id === parseInt(mediaId.value) && fav.type === mediaType.value)
+    );
+  } else {
+    // Ajouter aux favoris
+    favorites.push(mediaInfo);
   }
   
-  // Sauvegarder dans localStorage
-  localStorage.setItem('favorites', JSON.stringify(favorites.value));
+  localStorage.setItem('favorites', JSON.stringify(favorites));
+  isFavorite.value = !isFavorite.value;
+};
+
+const startVersus = () => {
+  const mediaInfo = {
+    id: parseInt(mediaId.value),
+    type: mediaType.value,
+    title: mediaDetails.value.title || mediaDetails.value.name,
+    year: releaseYear.value,
+    posterPath: posterUrl.value,
+    rating: mediaDetails.value.vote_average.toFixed(1)
+  };
+  
+  localStorage.setItem('versusCandidate', JSON.stringify(mediaInfo));
+  router.push('/versus');
+};
+
+const navigateToDetail = (id, type = mediaType.value) => {
+  router.push(`/detail/${type}/${id}`);
 };
 
 const goBack = () => {
   router.back();
 };
 
-const navigateToDetail = (id) => {
-  router.push(`/detail/${mediaType.value}/${id}`);
-};
-
-const startVersus = () => {
-  // Stocker le média actuel pour le versus
-  localStorage.setItem('versusMedia', JSON.stringify({
-    id: mediaDetails.value.id,
-    title: mediaDetails.value.title,
-    year: mediaDetails.value.year,
-    rating: mediaDetails.value.vote_average.toFixed(1),
-    posterPath: mediaDetails.value.poster_path 
-      ? `https://image.tmdb.org/t/p/w500${mediaDetails.value.poster_path}`
-      : 'https://via.placeholder.com/500x750?text=No+Image',
-    type: mediaType.value
-  }));
-  
-  // Rediriger vers la page versus
-  router.push('/versus');
-};
-
-// Surveiller les changements de route pour recharger les détails
-watch([mediaType, mediaId], () => {
-  fetchDetails();
-}, { immediate: false });
-
 // Initialisation
 onMounted(() => {
-  loadFavorites();
-  fetchDetails();
+  fetchMediaDetails();
 });
 </script>
 

@@ -14,6 +14,9 @@
         <router-link to="/versus" class="nav-link" active-class="active">
           <span>Versus</span>
         </router-link>
+        <router-link to="/tinder" class="nav-link" active-class="active">
+          <span>Découvrir</span>
+        </router-link>
         <router-link to="/history" class="nav-link" active-class="active">
           <span>Historique</span>
         </router-link>
@@ -23,7 +26,7 @@
       </div>
       
       <div class="nav-right">
-        <div class="search-icon">
+        <div class="search-icon" @click="goToHome">
           <i class="fas fa-search"></i>
         </div>
         <div class="user-profile">
@@ -206,11 +209,17 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const isScrolled = ref(false);
 
 const handleScroll = () => {
   isScrolled.value = window.scrollY > 50;
+};
+
+const goToHome = () => {
+  router.push('/');
 };
 
 onMounted(() => {

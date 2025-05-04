@@ -16,27 +16,25 @@
         <p>Préparation du ring...</p>
       </div>
       
-      <transition name="next-duel">
-        <div v-if="currentVersus.leftMedia && currentVersus.rightMedia && !isLoading" class="versus-arena" :key="duelKey">
-          <div class="arena-background"></div>
-          
-          <div class="versus-cards-container">
-            <VersusCard
-              :leftMedia="currentVersus.leftMedia"
-              :rightMedia="currentVersus.rightMedia"
-              @winner-selected="handleWinnerSelected"
-            />
-          </div>
-          
-          <!-- Compteur de rounds -->
-          <div class="round-counter">
-            <span class="round-label">ROUND</span>
-            <span class="round-number">{{ versusHistory.length + 1 }}</span>
-          </div>
+      <div v-else-if="currentVersus.leftMedia && currentVersus.rightMedia" class="versus-arena">
+        <div class="arena-background"></div>
+        
+        <div class="versus-cards-container">
+          <VersusCard
+            :leftMedia="currentVersus.leftMedia"
+            :rightMedia="currentVersus.rightMedia"
+            @winner-selected="handleWinnerSelected"
+          />
         </div>
-      </transition>
+        
+        <!-- Compteur de rounds -->
+        <div class="round-counter">
+          <span class="round-label">ROUND</span>
+          <span class="round-number">{{ versusHistory.length + 1 }}</span>
+        </div>
+      </div>
       
-      <div v-if="error && !isLoading" class="error-container">
+      <div v-else class="error-container">
         <div class="error-icon">
           <i class="fas fa-exclamation-triangle"></i>
         </div>
@@ -333,17 +331,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 300px;
-  animation: fadeIn 0.5s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  height: 300px;
 }
 
 .loading-ring {
@@ -351,7 +339,6 @@
   position: relative;
   width: 80px;
   height: 80px;
-  margin-bottom: 20px;
 }
 
 .loading-ring div {
@@ -361,7 +348,7 @@
   width: 64px;
   height: 64px;
   margin: 8px;
-  border: 6px solid #EC66A4;
+  border: 8px solid #fff;
   border-radius: 50%;
   animation: loading-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
   border-color: #EC66A4 transparent transparent transparent;
@@ -415,40 +402,30 @@
 .round-counter {
   position: absolute;
   top: -30px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, #EC66A4, #6C757D);
-  color: white;
-  padding: 5px 15px;
-  border-radius: 20px;
-  font-weight: 700;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #EC66A4;
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
   display: flex;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-  z-index: 10;
-  animation: bounce-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes bounce-in {
-  0% {
-    transform: translateX(-50%) scale(0);
-  }
-  50% {
-    transform: translateX(-50%) scale(1.2);
-  }
-  100% {
-    transform: translateX(-50%) scale(1);
-  }
+  color: white;
+  box-shadow: 0 0 15px rgba(236, 102, 164, 0.5);
 }
 
 .round-label {
-  font-size: 0.8rem;
-  opacity: 0.8;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .round-number {
-  font-size: 1.2rem;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #EC66A4;
 }
 
 /* Message d'erreur */
@@ -770,22 +747,6 @@
     max-width: 100%;
   }
 }
-
-/* Animation pour le passage au duel suivant */
-.next-duel-enter-active,
-.next-duel-leave-active {
-  transition: all 0.8s cubic-bezier(0.5, 0, 0.15, 1.4);
-}
-
-.next-duel-enter-from {
-  opacity: 0;
-  transform: scale(0.8) translateY(50px);
-}
-
-.next-duel-leave-to {
-  opacity: 0;
-  transform: scale(1.2) translateY(-100px);
-}
 </style>
 
 <script setup>
@@ -804,7 +765,6 @@ const versusHistory = ref([]);
 const popularMovies = ref([]);
 const popularTVShows = ref([]);
 const error = ref(null);
-const duelKey = ref(0); // Clé unique pour forcer la réinitialisation de l'animation
 
 // Calcul des statistiques
 const movieWins = computed(() => {
@@ -1031,23 +991,21 @@ const setupNewVersus = async () => {
   }
 };
 
-const handleWinnerSelected = (winner, loser) => {
+const handleWinnerSelected = (winner) => {
+  // Déterminer le perdant
+  const loser = winner === 'left' 
+    ? currentVersus.value.rightMedia 
+    : currentVersus.value.leftMedia;
+  
   // Ajouter à l'historique
   versusHistory.value.unshift({
     date: new Date(),
-    winner,
-    loser
+    winner: winner === 'left' ? currentVersus.value.leftMedia : currentVersus.value.rightMedia,
+    loser: loser
   });
   
-  // Charger un nouveau duel avec animation
-  setTimeout(() => {
-    isLoading.value = true;
-    
-    setTimeout(() => {
-      setupNewVersus();
-      duelKey.value++; // Incrémenter la clé pour forcer la réinitialisation de l'animation
-    }, 500);
-  }, 800);
+  // Charger un nouveau duel
+  setupNewVersus();
 };
 
 const formatDate = (date) => {
